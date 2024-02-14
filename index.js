@@ -3,6 +3,8 @@ const GRID_COLS = 5
 const GRID_ROWS = 5
 const SPOT_SIZE = 50 // 20
 
+let canvas, grid
+
 class Spot {
   constructor(i, j) {
     this.x = i
@@ -12,8 +14,14 @@ class Spot {
     this.g = 0
     this.h = 0
 
-    this.show = function() {
+    this.show = function(color) {
       // Print spot
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = color
+      ctx.strokeStyle = 'rgb(0, 0, 0)'
+      ctx.lineWidth = 1
+      ctx.strokeRect(this.x * SPOT_SIZE, this.y * SPOT_SIZE, SPOT_SIZE, SPOT_SIZE)
+      ctx.fillRect(this.x * SPOT_SIZE, this.y * SPOT_SIZE, SPOT_SIZE - 1, SPOT_SIZE - 1)
     }
   }
 }
@@ -25,18 +33,18 @@ let start, end
 function setup() {
   // Creating the canvas
   const app = document.getElementById('app')
-  const canvas = document.createElement('canvas')
+  canvas = document.createElement('canvas')
   canvas.width = GRID_ROWS * SPOT_SIZE
   canvas.height = GRID_COLS * SPOT_SIZE
   app.appendChild(canvas)
   
   // Making a 2D array
-  const grid = new Array(GRID_COLS)
+  grid = new Array(GRID_COLS)
   for (let i = 0; i < GRID_COLS; i++) {
     grid[i] = new Array(GRID_ROWS)
 
     for (let j = 0; j < GRID_ROWS; j++) {
-      grid[i][j] = new Spot();
+      grid[i][j] = new Spot(i, j);
     }
   }
 
@@ -54,9 +62,27 @@ function loop() {
   } else {
     // No solution
   }
+  
+  // Print all spots
+  for (let i = 0; i < GRID_COLS; i++) {
+    for (let j = 0; j < GRID_ROWS; j++) {
+      grid[i][j].show('rgb(255, 255, 255)')
+    }
+  }
+
+  // Print in red evaluated spots
+  for (let i = 0; i < closedSet.length; i++) {
+    closedSet[i].show('rgb(255, 0, 0)')
+  }
+
+  // Print in green non-evaluated spots
+  for (let i = 0; i < openSet.length; i++) {
+    openSet[i].show('rgb(0, 255, 0)')
+  }
 }
 
 setup()
+setInterval(loop, 1000);
 
 // OPEN SET: nodes that NEED to be evaluated
 // CLOSED SET: nodes that HAVE BEEN evaluated
