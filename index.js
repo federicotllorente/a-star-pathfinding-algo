@@ -1,18 +1,26 @@
+const GRID_COLS = 10
+const GRID_ROWS = 10
+// const SPOT_SIZE = 50 // 20
+const SPOT_SIZE = window.innerHeight < window.innerWidth
+  ? (window.innerHeight - 16) / GRID_ROWS
+  : (window.innerWidth - 16) / GRID_COLS
 
-const GRID_COLS = 5
-const GRID_ROWS = 5
-const SPOT_SIZE = 50 // 20
-
-let canvas, grid
+let openSet = [] // TODO Don't use let, use const, but I need a removeFromArray function or smth
+const closedSet = []
+let canvas, grid, start, end
 
 class Spot {
-  constructor(i, j) {
-    this.x = i
-    this.y = j
+  constructor(x, y) {
+    // Location
+    this.x = x
+    this.y = y
 
+    // Distance
     this.f = 0
     this.g = 0
     this.h = 0
+
+    this.neighbors = []
 
     this.show = function(color) {
       // Print spot
@@ -23,12 +31,19 @@ class Spot {
       ctx.strokeRect(this.x * SPOT_SIZE, this.y * SPOT_SIZE, SPOT_SIZE, SPOT_SIZE)
       ctx.fillRect(this.x * SPOT_SIZE, this.y * SPOT_SIZE, SPOT_SIZE - 1, SPOT_SIZE - 1)
     }
+
+    this.setNeighbors = function() {
+      // Left neighbor
+      if (this.x > 0) this.neighbors.push(grid[this.x - 1][this.y])
+      // Top neighbor
+      if (this.y > 0) this.neighbors.push(grid[this.x][this.y - 1])
+      // Right neighbor
+      if (this.x < GRID_COLS - 1) this.neighbors.push(grid[this.x + 1][this.y])
+      // Bottom neighbor
+      if (this.y < GRID_ROWS - 1) this.neighbors.push(grid[this.x][this.y + 1])
+    }
   }
 }
-
-const openSet = []
-const closedSet = []
-let start, end
 
 function setup() {
   // Creating the canvas
@@ -48,6 +63,14 @@ function setup() {
     }
   }
 
+  // Add neighbors
+  for (let i = 0; i < GRID_COLS; i++) {
+    for (let j = 0; j < GRID_ROWS; j++) {
+      grid[i][j].setNeighbors()
+      // console.log(grid[i][j].neighbors)
+    }
+  }
+
   // Set start and end
   start = grid[0][0]
   end = grid[GRID_COLS - 1][GRID_ROWS - 1]
@@ -59,6 +82,42 @@ function setup() {
 function loop() {
   if (openSet.length > 0) {
     // Keep going
+
+    let lowestF = 0
+    // Evaluate every spot in the open set
+    for (let i = 0; i < openSet.length; i++) {
+      if (openSet[i].f < openSet[lowestF].f) {
+        lowestF = i
+      }
+    }
+
+    let current = openSet[lowestF]
+
+    if (current === end) {
+      console.log('DONE!')
+    }
+
+    // Remove current spot from the open set and add it to the closed set
+    openSet = openSet.filter(el => !(el.x === current.x && el.y === current.y))
+    closedSet.push(current)
+
+    for (let i = 0; i < current.neighbors.length; i++) {
+      // Check every neighbor
+      let tentativeG
+      const neighbor = current.neighbors[i]
+      if (!closedSet.includes(neighbor)) {
+        tentativeG = current.g + 1 // TODO 1 being the distance between current and the neighbor
+
+        if (openSet.includes(neighbor)) {
+          if (tentativeG < neighbor.g) {
+            neighbor.g = tentativeG
+          }
+        } else {
+          neighbor.g = tentativeG
+          openSet.push(neighbor)
+        }
+      }
+    }
   } else {
     // No solution
   }
@@ -81,8 +140,8 @@ function loop() {
   }
 }
 
-setup()
-setInterval(loop, 1000);
+// setup()
+// setInterval(loop, 1000);
 
 // OPEN SET: nodes that NEED to be evaluated
 // CLOSED SET: nodes that HAVE BEEN evaluated
