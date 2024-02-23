@@ -1,5 +1,5 @@
-const GRID_COLS = 10
-const GRID_ROWS = 10
+const GRID_COLS = 30
+const GRID_ROWS = 30
 // const SPOT_SIZE = 50 // 20
 const SPOT_SIZE = window.innerHeight < window.innerWidth
   ? (window.innerHeight - 16) / GRID_ROWS
@@ -7,7 +7,8 @@ const SPOT_SIZE = window.innerHeight < window.innerWidth
 
 let openSet = [] // TODO Don't use let, use const, but I need a removeFromArray function or smth
 const closedSet = []
-let canvas, grid, start, end
+let path = []
+let int, canvas, grid, start, end
 
 class Spot {
   constructor(x, y) {
@@ -21,6 +22,7 @@ class Spot {
     this.h = 0
 
     this.neighbors = []
+    this.previous = null
 
     this.show = function(color) {
       // Print spot
@@ -67,7 +69,6 @@ function setup() {
   for (let i = 0; i < GRID_COLS; i++) {
     for (let j = 0; j < GRID_ROWS; j++) {
       grid[i][j].setNeighbors()
-      // console.log(grid[i][j].neighbors)
     }
   }
 
@@ -79,7 +80,21 @@ function setup() {
   openSet.push(start)
 }
 
+function distBetween(a, b) {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+}
+
+function removeFromArray(arr, el) {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (arr[i] == el) {
+      arr.splice(i, 1)
+    }
+  }
+}
+
 function loop() {
+  let current
+
   if (openSet.length > 0) {
     // Keep going
 
@@ -91,22 +106,23 @@ function loop() {
       }
     }
 
-    let current = openSet[lowestF]
+    current = openSet[lowestF]
 
     if (current === end) {
       console.log('DONE!')
+      clearInterval(int)
     }
 
     // Remove current spot from the open set and add it to the closed set
-    openSet = openSet.filter(el => !(el.x === current.x && el.y === current.y))
+    removeFromArray(openSet, current)
     closedSet.push(current)
 
     for (let i = 0; i < current.neighbors.length; i++) {
       // Check every neighbor
-      let tentativeG
       const neighbor = current.neighbors[i]
       if (!closedSet.includes(neighbor)) {
-        tentativeG = current.g + 1 // TODO 1 being the distance between current and the neighbor
+        // Distance from start to neighbor
+        let tentativeG = current.g + 1 // TODO 1 being the distance between current and the neighbor
 
         if (openSet.includes(neighbor)) {
           if (tentativeG < neighbor.g) {
@@ -116,12 +132,16 @@ function loop() {
           neighbor.g = tentativeG
           openSet.push(neighbor)
         }
+
+        neighbor.h = distBetween(neighbor, end) // Distance between the neighbor and the end (heuristic cost estimate?)
+        neighbor.f = neighbor.g + neighbor.h
+        neighbor.previous = current
       }
     }
   } else {
     // No solution
   }
-  
+
   // Print all spots
   for (let i = 0; i < GRID_COLS; i++) {
     for (let j = 0; j < GRID_ROWS; j++) {
@@ -138,10 +158,25 @@ function loop() {
   for (let i = 0; i < openSet.length; i++) {
     openSet[i].show('rgb(0, 255, 0)')
   }
+
+  // Find the path
+  path = []
+  let temp = current
+  path.push(current)
+  while (temp?.previous) {
+    path.push(temp.previous)
+    temp = temp.previous
+  }
+
+  // Print in blue spots in the path
+  for (let i = 0; i < path.length; i++) {
+    path[i].show('rgb(0, 0, 255)')
+  }
+
 }
 
-// setup()
-// setInterval(loop, 1000);
+setup()
+int = setInterval(loop, 10);
 
 // OPEN SET: nodes that NEED to be evaluated
 // CLOSED SET: nodes that HAVE BEEN evaluated
