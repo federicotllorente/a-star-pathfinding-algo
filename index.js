@@ -1,17 +1,18 @@
-const GRID_COLS = 30
-const GRID_ROWS = 30
+const GRID_COLS = 50
+const GRID_ROWS = 50
 
 const SPOT_SIZE = window.innerHeight < window.innerWidth
   ? (window.innerHeight - 16) / GRID_ROWS
   : (window.innerWidth - 16) / GRID_COLS
 
 const LOOP_INTERVAL = 50
-const WALL_PROBABILITY = 0.15
+const WALL_PROBABILITY = 0.2
 
 let openSet = [] // TODO Don't use let, use const, but I need a removeFromArray function or smth
 const closedSet = []
 let path = []
 let int, canvas, grid, start, end
+let isFinished = false
 
 class Spot {
   constructor(x, y) {
@@ -51,6 +52,24 @@ class Spot {
       if (this.x < GRID_COLS - 1) this.neighbors.push(grid[this.x + 1][this.y])
       // Bottom neighbor
       if (this.y < GRID_ROWS - 1) this.neighbors.push(grid[this.x][this.y + 1])
+
+      // Diagonals
+
+      // Top left
+      if (this.x > 0 && this.y > 0)
+        this.neighbors.push(grid[this.x - 1][this.y - 1])
+
+      // Top right
+      if (this.x < GRID_COLS - 1 && this.y > 0)
+        this.neighbors.push(grid[this.x + 1][this.y - 1])
+
+      // Bottom left
+      if (this.x > 0 && this.y < GRID_ROWS - 1)
+        this.neighbors.push(grid[this.x - 1][this.y + 1])
+
+      // Bottom right
+      if (this.x < GRID_COLS - 1 && this.y < GRID_ROWS - 1)
+        this.neighbors.push(grid[this.x + 1][this.y + 1])
     }
   }
 }
@@ -89,7 +108,10 @@ function setup() {
 }
 
 function distBetween(a, b) {
-  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
+  const dx = a.x - b.x
+  const dy = a.y - b.y
+  return Math.sqrt(dx * dx + dy * dy)
+  // return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
 }
 
 function removeFromArray(arr, el) {
@@ -119,6 +141,7 @@ function loop() {
     if (current === end) {
       console.log('DONE!')
       clearInterval(int)
+      isFinished = true
     }
 
     // Remove current spot from the open set and add it to the closed set
@@ -131,25 +154,31 @@ function loop() {
       if (!closedSet.includes(neighbor) && !neighbor.isWall) {
         // Distance from start to neighbor
         let tentativeG = current.g + 1 // TODO 1 being the distance between current and the neighbor
+        let isNewPath = false
 
         if (openSet.includes(neighbor)) {
           if (tentativeG < neighbor.g) {
             neighbor.g = tentativeG
+            isNewPath = true
           }
         } else {
           neighbor.g = tentativeG
+          isNewPath = true
           openSet.push(neighbor)
         }
 
-        neighbor.h = distBetween(neighbor, end) // Distance between the neighbor and the end (heuristic cost estimate?)
-        neighbor.f = neighbor.g + neighbor.h
-        neighbor.previous = current
+        if (isNewPath) {
+          neighbor.h = distBetween(neighbor, end) // Distance between the neighbor and the end (heuristic cost estimate?)
+          neighbor.f = neighbor.g + neighbor.h
+          neighbor.previous = current
+        }
       }
     }
   } else {
     // No solution
     console.log('NO SOLUTION :(')
     clearInterval(int)
+    isFinished = true
   }
 
   // Print all spots
@@ -193,24 +222,22 @@ int = setInterval(loop, LOOP_INTERVAL)
 
 let isPaused = false
 
-// Paused/resume searching when the spacebar is tapped
+// Start/pause/resume searching when the spacebar is tapped
 document.addEventListener('keydown', (event) => {
   if (event.code === 'Space') {
-    if (!isPaused) {
-      clearInterval(int)
-      console.log('PAUSED')
-      isPaused = true
+    if (isFinished) {
+      location.reload()
     } else {
-      int = setInterval(loop, LOOP_INTERVAL)
-      console.log('RESUMED')
-      isPaused = false
+      if (!isPaused) {
+        clearInterval(int)
+        console.log('PAUSED')
+        isPaused = true
+      } else {
+        int = setInterval(loop, LOOP_INTERVAL)
+        console.log('RESUMED')
+        isPaused = false
+      }
     }
-  }
-})
-
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'r' || event.key === 'R') {
-    location.reload()
   }
 })
 
