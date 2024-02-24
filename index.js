@@ -1,9 +1,12 @@
 const GRID_COLS = 30
 const GRID_ROWS = 30
-// const SPOT_SIZE = 50 // 20
+
 const SPOT_SIZE = window.innerHeight < window.innerWidth
   ? (window.innerHeight - 16) / GRID_ROWS
   : (window.innerWidth - 16) / GRID_COLS
+
+const LOOP_INTERVAL = 50
+const WALL_PROBABILITY = 0.15
 
 let openSet = [] // TODO Don't use let, use const, but I need a removeFromArray function or smth
 const closedSet = []
@@ -23,11 +26,16 @@ class Spot {
 
     this.neighbors = []
     this.previous = null
+    this.isWall = false
+
+    if (Math.random() < WALL_PROBABILITY) {
+      this.isWall = true
+    }
 
     this.show = function(color) {
       // Print spot
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = color
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = this.isWall ? 'rgb(0, 0, 0)' : color
       ctx.strokeStyle = 'rgb(0, 0, 0)'
       ctx.lineWidth = 1
       ctx.strokeRect(this.x * SPOT_SIZE, this.y * SPOT_SIZE, SPOT_SIZE, SPOT_SIZE)
@@ -120,7 +128,7 @@ function loop() {
     for (let i = 0; i < current.neighbors.length; i++) {
       // Check every neighbor
       const neighbor = current.neighbors[i]
-      if (!closedSet.includes(neighbor)) {
+      if (!closedSet.includes(neighbor) && !neighbor.isWall) {
         // Distance from start to neighbor
         let tentativeG = current.g + 1 // TODO 1 being the distance between current and the neighbor
 
@@ -140,6 +148,8 @@ function loop() {
     }
   } else {
     // No solution
+    console.log('NO SOLUTION :(')
+    clearInterval(int)
   }
 
   // Print all spots
@@ -170,13 +180,39 @@ function loop() {
 
   // Print in blue spots in the path
   for (let i = 0; i < path.length; i++) {
-    path[i].show('rgb(0, 0, 255)')
+    path[i]?.show('rgb(0, 0, 255)')
   }
 
+  // TODO
+  start.isWall = false
+  end.isWall = false
 }
 
 setup()
-int = setInterval(loop, 10);
+int = setInterval(loop, LOOP_INTERVAL)
+
+let isPaused = false
+
+// Paused/resume searching when the spacebar is tapped
+document.addEventListener('keydown', (event) => {
+  if (event.code === 'Space') {
+    if (!isPaused) {
+      clearInterval(int)
+      console.log('PAUSED')
+      isPaused = true
+    } else {
+      int = setInterval(loop, LOOP_INTERVAL)
+      console.log('RESUMED')
+      isPaused = false
+    }
+  }
+})
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'r' || event.key === 'R') {
+    location.reload()
+  }
+})
 
 // OPEN SET: nodes that NEED to be evaluated
 // CLOSED SET: nodes that HAVE BEEN evaluated
